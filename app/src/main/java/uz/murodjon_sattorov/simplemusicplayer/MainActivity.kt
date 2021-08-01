@@ -10,7 +10,9 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
+import android.view.animation.Animation
 import android.view.animation.LinearInterpolator
+import android.view.animation.RotateAnimation
 import android.view.animation.TranslateAnimation
 import android.widget.SeekBar
 import android.widget.Toast
@@ -58,6 +60,19 @@ class MainActivity : AppCompatActivity() {
             mainBinding.titleMusic2.translationX = translationX - width
         }
         animation.start()
+
+        val rotate = RotateAnimation(
+            0F,
+            360F,
+            Animation.RELATIVE_TO_SELF,
+            0.5f,
+            Animation.RELATIVE_TO_SELF,
+            0.5f
+        )
+        rotate.duration = 9000
+        rotate.repeatCount = 50
+        rotate.interpolator = LinearInterpolator()
+        mainBinding.image.startAnimation(rotate)
 
         mainBinding.seekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {

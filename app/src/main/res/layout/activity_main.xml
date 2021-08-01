@@ -12,7 +12,6 @@
         android:layout_height="0dp"
         android:layout_margin="56dp"
         android:contentDescription="@string/app_name"
-        android:src="@drawable/headphones"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -22,6 +21,20 @@
         custom:avSpeed="fast"
         custom:avType="fill"
         custom:avWidth="1dp" />
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/image"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_margin="120dp"
+        android:contentDescription="@string/app_name"
+        android:src="@drawable/headphones"
+        android:adjustViewBounds="true"
+        app:shapeAppearanceOverlay="@style/circleImageView"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/title_music"
