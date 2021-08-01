@@ -1,12 +1,16 @@
 package uz.murodjon_sattorov.simplemusicplayer
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
 import android.media.MediaPlayer
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
-import android.view.View
+import android.widget.SeekBar
 import android.widget.Toast
-import com.gauravk.audiovisualizer.visualizer.CircleLineVisualizer
 import uz.murodjon_sattorov.simplemusicplayer.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -15,7 +19,10 @@ class MainActivity : AppCompatActivity() {
     private var changeRepeat: Boolean = false
     private var changePlayAndPause: Boolean = false
     private var player: MediaPlayer? = null
+    private var runnable: Runnable? = null
+    private var handler: Handler? = null
     private var allSongs = IntArray(10)
+    private var allTitles = arrayOfNulls<String>(10)
     private var countMusic: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,32 +30,91 @@ class MainActivity : AppCompatActivity() {
         mainBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(mainBinding.root)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_DENIED) {
+                val permission = arrayOf(
+                    Manifest.permission.RECORD_AUDIO
+                )
+                requestPermissions(permission, 1000)
+            } else {
+                onStart()
+            }
+        } else {
+            onStart()
+        }
+
+        mainBinding.seekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    player!!.seekTo(progress)
+                    mainBinding.seekbar.progress = progress
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar) {
+
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar) {
+
+            }
+        })
+
+    }
+
+    override fun onStart() {
+        super.onStart()
         mainBinding.repeatAndShuffle.setBackgroundResource(R.drawable.ic_baseline_repeat_24)
         mainBinding.playAndPause.setBackgroundResource(R.drawable.ic_baseline_play_arrow_24)
 
-        allSounds()
+        allSoundsAndTitles()
+        handler = Handler()
 
         changeRepeatAndShuffle()
         skipPrevious()
         playAndPause()
         skipNext()
         stopBtn()
-
     }
-    private fun allSounds(){
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        when (requestCode) {
+            1000 -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    onStart()
+                } else {
+                    Toast.makeText(this, "Permission denied...", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+
+    private fun allSoundsAndTitles() {
         allSongs = intArrayOf(
-            R.raw.sound1,
-            R.raw.sound2,
-            R.raw.sound3,
-            R.raw.sound4
+            R.raw.song,
+            R.raw.song2,
+            R.raw.song3,
+            R.raw.song4,
+            R.raw.song5
         )
+        allTitles = arrayOf(
+            "Shohijahon Jo'rayev - yoring go'zal xur bo'lsin",
+            "Dildora Niyozova - Onaginam",
+            "Bahodir Mamajonov - qaydan bilsin",
+            "Xurshid Rasulov - Bahorim",
+            "Morgenshteyn - problema")
     }
 
     private fun changeRepeatAndShuffle() {
         mainBinding.repeatAndShuffle.setOnClickListener {
             changeRepeat = if (changeRepeat) {
                 mainBinding.repeatAndShuffle.setBackgroundResource(R.drawable.ic_baseline_repeat_24)
-                allSounds()
+                allSoundsAndTitles()
                 false
             } else {
                 mainBinding.repeatAndShuffle.setBackgroundResource(R.drawable.ic_baseline_shuffle_24)
@@ -65,14 +131,20 @@ class MainActivity : AppCompatActivity() {
                 countMusic--
                 player = MediaPlayer.create(this, allSongs[countMusic])
                 player?.start()
+                mainBinding.titleMusic.text = allTitles[countMusic]
                 player!!.setOnCompletionListener {
                     autoNext()
                 }
-            }else if (countMusic == 0) {
+            } else if (countMusic == 0) {
                 player?.stop()
                 countMusic = allSongs.size - 1
                 player = MediaPlayer.create(this, allSongs[countMusic])
+                val audioSessionId = player!!.audioSessionId
+                if (audioSessionId != -1) {
+                    mainBinding.blob.setAudioSessionId(audioSessionId)
+                }
                 player?.start()
+                mainBinding.titleMusic.text = allTitles[countMusic]
                 player!!.setOnCompletionListener {
                     autoNext()
                 }
@@ -95,9 +167,25 @@ class MainActivity : AppCompatActivity() {
                 mainBinding.playAndPause.setBackgroundResource(R.drawable.ic_baseline_pause_24)
                 if (player == null) {
                     player = MediaPlayer.create(this, allSongs[countMusic])
+                    mainBinding.titleMusic.text = allTitles[countMusic]
+                    val audioSessionId = player!!.audioSessionId
+                    if (audioSessionId != -1) {
+                        mainBinding.blob.setAudioSessionId(audioSessionId)
+                    }
                     player!!.setOnCompletionListener {
                         Log.d("TAG", "playAndPause: $player")
                         autoNext()
+                    }
+                    player!!.setOnPreparedListener {
+                        mainBinding.seekbar.max = it.duration
+                        updateSeekBar()
+
+                        mainBinding.currentDuration.text = createTimerLabel(it.duration)
+
+                        //set max duration
+                        val totTime = createTimerLabel(player!!.duration)
+                        mainBinding.totalDuration.text = totTime
+
                     }
                 }
                 player?.start()
@@ -112,21 +200,76 @@ class MainActivity : AppCompatActivity() {
                 player?.stop()
                 countMusic++
                 player = MediaPlayer.create(this, allSongs[countMusic])
+                val audioSessionId = player!!.audioSessionId
+                if (audioSessionId != -1) {
+                    mainBinding.blob.setAudioSessionId(audioSessionId)
+                }
                 player?.start()
+                mainBinding.titleMusic.text = allTitles[countMusic]
                 player!!.setOnCompletionListener {
                     autoNext()
                 }
-            }else if (countMusic == allSongs.size - 1) {
+            } else if (countMusic == allSongs.size - 1) {
                 player?.stop()
                 countMusic = 0
                 player = MediaPlayer.create(this, allSongs[countMusic])
+                val audioSessionId = player!!.audioSessionId
+                if (audioSessionId != -1) {
+                    mainBinding.blob.setAudioSessionId(audioSessionId)
+                }
                 player?.start()
+                mainBinding.titleMusic.text = allTitles[countMusic]
                 player!!.setOnCompletionListener {
                     autoNext()
                 }
             }
 
         }
+    }
+
+    private fun autoNext() {
+        if (player != null) {
+            countMusic++
+            Log.d("TAG", "autoNext: $countMusic")
+            player = MediaPlayer.create(this, allSongs[countMusic])
+            val audioSessionId = player!!.audioSessionId
+            if (audioSessionId != -1) {
+                mainBinding.blob.setAudioSessionId(audioSessionId)
+            }
+            player?.start()
+            mainBinding.titleMusic.text = allTitles[countMusic]
+            player!!.setOnCompletionListener {
+                if (countMusic == allSongs.size - 1) {
+                    countMusic = -1
+                    autoNext()
+                } else autoNext()
+            }
+        }
+    }
+
+    private fun updateSeekBar() {
+        val currentPosition = player!!.currentPosition
+        mainBinding.seekbar.progress = currentPosition
+
+        runnable = Runnable {
+            updateSeekBar()
+        }
+
+        handler?.postDelayed(runnable!!, 1000)
+
+    }
+
+    private fun createTimerLabel(duration: Int): String {
+        var timerLabel: String = ""
+        val min = duration / 1000 / 60
+        val sec = duration / 1000 % 60
+
+        timerLabel += "$min:"
+
+        if (sec < 10) timerLabel += "0"
+        timerLabel += sec
+
+        return timerLabel
     }
 
     private fun stopBtn() {
@@ -141,27 +284,9 @@ class MainActivity : AppCompatActivity() {
             changePlayAndPause = false
             player?.release()
             player = null
+            mainBinding.blob.release()
             Toast.makeText(this, "Player stop", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun autoNext() {
-        if (player != null) {
-            countMusic++
-            Log.d("TAG", "autoNext: $countMusic")
-            player = MediaPlayer.create(this, allSongs[countMusic])
-            player?.start()
-            player!!.setOnCompletionListener {
-                if (countMusic == allSongs.size - 1) {
-                    countMusic = -1
-                    autoNext()
-                } else autoNext()
-            }
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        stopPlayer()
-    }
 }
