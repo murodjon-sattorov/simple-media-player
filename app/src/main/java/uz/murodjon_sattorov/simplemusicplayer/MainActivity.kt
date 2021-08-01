@@ -1,6 +1,7 @@
 package uz.murodjon_sattorov.simplemusicplayer
 
 import android.Manifest
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.media.MediaPlayer
@@ -9,6 +10,8 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
+import android.view.animation.LinearInterpolator
+import android.view.animation.TranslateAnimation
 import android.widget.SeekBar
 import android.widget.Toast
 import uz.murodjon_sattorov.simplemusicplayer.databinding.ActivityMainBinding
@@ -42,6 +45,19 @@ class MainActivity : AppCompatActivity() {
         } else {
             onStart()
         }
+
+        val animation = ValueAnimator.ofFloat(1.0f, 0.0f)
+        animation.repeatCount = ValueAnimator.INFINITE
+        animation.interpolator = LinearInterpolator()
+        animation.duration = 12000L
+        animation.addUpdateListener {
+            val progression = animation.animatedValue as Float
+            val width = mainBinding.titleMusic.width
+            val translationX = width * progression
+            mainBinding.titleMusic.translationX = translationX
+            mainBinding.titleMusic2.translationX = translationX - width
+        }
+        animation.start()
 
         mainBinding.seekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
@@ -107,7 +123,8 @@ class MainActivity : AppCompatActivity() {
             "Dildora Niyozova - Onaginam",
             "Bahodir Mamajonov - qaydan bilsin",
             "Xurshid Rasulov - Bahorim",
-            "Morgenshteyn - problema")
+            "Morgenshteyn - problema"
+        )
     }
 
     private fun changeRepeatAndShuffle() {
@@ -132,6 +149,7 @@ class MainActivity : AppCompatActivity() {
                 player = MediaPlayer.create(this, allSongs[countMusic])
                 player?.start()
                 mainBinding.titleMusic.text = allTitles[countMusic]
+                mainBinding.titleMusic2.text = allTitles[countMusic]
                 player!!.setOnCompletionListener {
                     autoNext()
                 }
@@ -145,6 +163,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 player?.start()
                 mainBinding.titleMusic.text = allTitles[countMusic]
+                mainBinding.titleMusic2.text = allTitles[countMusic]
                 player!!.setOnCompletionListener {
                     autoNext()
                 }
@@ -168,6 +187,7 @@ class MainActivity : AppCompatActivity() {
                 if (player == null) {
                     player = MediaPlayer.create(this, allSongs[countMusic])
                     mainBinding.titleMusic.text = allTitles[countMusic]
+                    mainBinding.titleMusic2.text = allTitles[countMusic]
                     val audioSessionId = player!!.audioSessionId
                     if (audioSessionId != -1) {
                         mainBinding.blob.setAudioSessionId(audioSessionId)
@@ -206,6 +226,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 player?.start()
                 mainBinding.titleMusic.text = allTitles[countMusic]
+                mainBinding.titleMusic2.text = allTitles[countMusic]
                 player!!.setOnCompletionListener {
                     autoNext()
                 }
@@ -219,6 +240,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 player?.start()
                 mainBinding.titleMusic.text = allTitles[countMusic]
+                mainBinding.titleMusic2.text = allTitles[countMusic]
                 player!!.setOnCompletionListener {
                     autoNext()
                 }
@@ -238,6 +260,7 @@ class MainActivity : AppCompatActivity() {
             }
             player?.start()
             mainBinding.titleMusic.text = allTitles[countMusic]
+            mainBinding.titleMusic2.text = allTitles[countMusic]
             player!!.setOnCompletionListener {
                 if (countMusic == allSongs.size - 1) {
                     countMusic = -1
